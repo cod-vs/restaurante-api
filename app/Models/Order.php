@@ -10,12 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     use HasFactory;
-    protected $fillable = ['restaurante_id', 'status', 'total', 'notes'];
 
-    public function restaurante(): BelongsTo
-    {
-        return $this->belongsTo(Restaurante::class);
-    }
+    protected $fillable = ['status', 'total', 'notes'];
 
     public function orderItems(): HasMany
     {

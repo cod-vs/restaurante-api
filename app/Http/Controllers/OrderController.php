@@ -4,30 +4,34 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Producto;
-use App\Models\Restaurante;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
-    public function index(Restaurante $restaurante)
+    public function daily()
     {
-        return response()->json(
-            $restaurante->orders()->with('orderItems.producto')->latest()->get()
-        );
+        return $this->getSummary('day');
     }
 
-    public function today(Restaurante $restaurante)
+    public function weekly()
     {
-        return response()->json(
-            $restaurante->orders()->with('orderItems.producto')->whereDate('created_at', today())->latest()->get()
-        );
+        return $this->getSummary('week');
+    }
+
+    public function monthly()
+    {
+        return $this->getSummary('month');
+    }
+
+    public function yearly()
+    {
+        return $this->getSummary('year');
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'restaurante_id'      => 'required|exists:restaurantes,id',
             'notes'               => 'nullable|string',
             'items'               => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
@@ -35,13 +39,12 @@ class OrderController extends Controller
         ]);
 
         $order = DB::transaction(function () use ($data) {
-            $total = 0;
+            $total         = 0;
             $itemsToInsert = [];
 
             foreach ($data['items'] as $item) {
-                $producto   = Producto::findOrFail($item['producto_id']);
-                $total     += $producto->price * $item['quantity'];
-
+                $producto        = Producto::findOrFail($item['producto_id']);
+                $total          += $producto->price * $item['quantity'];
                 $itemsToInsert[] = [
                     'producto_id' => $producto->id,
                     'quantity'    => $item['quantity'],
@@ -50,10 +53,9 @@ class OrderController extends Controller
             }
 
             $order = Order::create([
-                'restaurante_id' => $data['restaurante_id'],
-                'status'         => 'pending',
-                'total'          => $total,
-                'notes'          => $data['notes'] ?? null,
+                'status' => 'pending',
+                'total'  => $total,
+                'notes'  => $data['notes'] ?? null,
             ]);
 
             $order->orderItems()->createMany($itemsToInsert);
@@ -71,5 +73,44 @@ class OrderController extends Controller
         ]));
 
         return response()->json($order);
+    }
+
+    public function filter(Request $request)
+    {
+        $data = $request->validate([
+            'from' => 'required|date',
+            'to'   => 'required|date|after_or_equal:from',
+        ]);
+
+        return $this->getSummary('custom', $data['from'], $data['to']);
+    }
+
+    private function getSummary(string $period, string $from = null, string $to = null)
+    {
+        $start = $from ? now()->parse($from)->startOfDay() : now()->startOf($period);
+        $end   = $to   ? now()->parse($to)->endOfDay()     : now()->endOf($period);
+
+        $products = DB::table('order_items')
+            ->join('productos', 'productos.id', '=', 'order_items.producto_id')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.status', 'completed')
+            ->whereBetween('orders.created_at', [$start, $end])
+            ->select(
+                'productos.name',
+                DB::raw('SUM(order_items.quantity) as total_quantity'),
+                DB::raw('SUM(order_items.quantity * order_items.unit_price) as total_revenue')
+            )
+            ->groupBy('productos.id', 'productos.name')
+            ->orderByDesc('total_revenue')
+            ->get();
+
+        return response()->json([
+            'period'         => $period,
+            'total_orders'   => Order::where('status', 'completed')
+                                    ->whereBetween('created_at', [$start, $end])
+                                    ->count(),
+            'total_revenue'  => $products->sum('total_revenue'),
+            'products'       => $products,
+        ]);
     }
 }

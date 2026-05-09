@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('productos', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->foreignId('restaurante_id')->constrained('restaurantes')->onDelete('cascade');
             $table->decimal('price', 8, 2);
             $table->timestamps();
         });

@@ -19,11 +19,24 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
 
-        Restaurante::factory(3)->create()->each(function (Restaurante $restaurante) {
+        Restaurante::create([
+            'name'    => 'Mi Restaurante',
+            'address' => '123 Main Street',
+        ]);
 
-            $productos = Producto::factory(5)->create(['restaurante_id' => $restaurante->id]);
+        $productos = Producto::factory(8)->create();
 
-            Order::factory(5)->create(['restaurante_id' => $restaurante->id])->each(function (Order $order) use ($productos) {
+        $dates = [
+            now(),
+            now()->subDays(2),
+            now()->subWeeks(2),
+            now()->subMonths(2),
+            now()->subMonths(6),
+            now()->subYear(),
+        ];
+
+        foreach ($dates as $date) {
+            Order::factory(3)->create(['status' => 'completed', 'created_at' => $date])->each(function (Order $order) use ($productos, $date) {
                 $total = 0;
 
                 foreach ($productos->random(2) as $producto) {
@@ -37,8 +50,8 @@ class DatabaseSeeder extends Seeder
                     ]);
                 }
 
-                $order->update(['total' => $total]);
+                $order->update(['total' => $total, 'updated_at' => $date]);
             });
-        });
+        }
     }
 }
