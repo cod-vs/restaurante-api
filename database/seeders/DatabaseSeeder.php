@@ -36,7 +36,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($dates as $date) {
-            Order::factory(3)->create(['status' => 'completed', 'created_at' => $date])->each(function (Order $order) use ($productos, $date) {
+            Order::factory(3)->create(['created_at' => $date])->each(function (Order $order) use ($productos, $date) {
                 $total = 0;
 
                 foreach ($productos->random(2) as $producto) {

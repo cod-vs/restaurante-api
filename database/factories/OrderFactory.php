@@ -9,9 +9,8 @@ class OrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'status' => fake()->randomElement(['pending', 'completed', 'cancelled']),
-            'total'  => 0,
-            'notes'  => fake()->optional()->sentence(),
+            'total' => 0,
+            'notes' => fake()->optional()->sentence(),
         ];
     }
 }

@@ -53,9 +53,8 @@ class OrderController extends Controller
             }
 
             $order = Order::create([
-                'status' => 'pending',
-                'total'  => $total,
-                'notes'  => $data['notes'] ?? null,
+                'total' => $total,
+                'notes' => $data['notes'] ?? null,
             ]);
 
             $order->orderItems()->createMany($itemsToInsert);
@@ -64,15 +63,6 @@ class OrderController extends Controller
         });
 
         return response()->json($order, 201);
-    }
-
-    public function updateStatus(Request $request, Order $order)
-    {
-        $order->update($request->validate([
-            'status' => 'required|in:pending,completed,cancelled',
-        ]));
-
-        return response()->json($order);
     }
 
     public function filter(Request $request)
@@ -93,7 +83,6 @@ class OrderController extends Controller
         $products = DB::table('order_items')
             ->join('productos', 'productos.id', '=', 'order_items.producto_id')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->where('orders.status', 'completed')
             ->whereBetween('orders.created_at', [$start, $end])
             ->select(
                 'productos.name',
@@ -105,12 +94,14 @@ class OrderController extends Controller
             ->get();
 
         return response()->json([
-            'period'         => $period,
-            'total_orders'   => Order::where('status', 'completed')
-                                    ->whereBetween('created_at', [$start, $end])
-                                    ->count(),
-            'total_revenue'  => $products->sum('total_revenue'),
-            'products'       => $products,
+            'period'        => $period,
+            'total_orders'  => Order::whereBetween('created_at', [$start, $end])->count(),
+            'products'      => $products->map(fn($p) => [
+                'name'           => $p->name,
+                'total_quantity' => (int) $p->total_quantity,
+                'total_revenue'  => round((float) $p->total_revenue, 2),
+            ]),
+            'total_revenue' => round($products->sum('total_revenue'), 2),
         ]);
     }
 }

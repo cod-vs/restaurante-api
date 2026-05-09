@@ -24,5 +24,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('orders/yearly',           [OrderController::class, 'yearly']);
     Route::get('orders/filter',           [OrderController::class, 'filter']);
     Route::post('orders',            [OrderController::class, 'store']);
-    Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
+
 });

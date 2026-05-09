@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
             $table->decimal('total', 10, 2);
             $table->text('notes')->nullable();
             $table->timestamps();
